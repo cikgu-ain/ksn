@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Squid Game Sebutan</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: linear-gradient(#000, #111);
+    color: white;
+    text-align: center;
+}
+
+#game {
+    max-width: 500px;
+    margin: auto;
+    padding: 10px;
+}
+
+#road {
+    position: relative;
+    height: 150px;
+    background: #222;
+    border: 2px solid red;
+    border-radius: 10px;
+}
+
+#car {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    font-size: 40px;
+    transition: left 1s;
+}
+
+#obstacle {
+    position: absolute;
+    right: 20px;
+    bottom: 10px;
+    font-size: 40px;
+}
+
+button {
+    padding: 12px;
+    margin: 8px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+}
+
+.choice {
+    background: #ff0055;
+    color: white;
+}
+
+#micBtn {
+    background: red;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+}
+
+#nextBtn {
+    display: none;
+    background: green;
+}
+
+#sentence {
+    margin: 15px;
+    font-size: 18px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="game">
+    <h2>🎭 Squid Game Sebutan</h2>
+    <div id="level"></div>
+    <div id="score">Markah: 0</div>
+
+    <div id="road">
+        <div id="car">🚗</div>
+        <div id="obstacle">🚧</div>
+    </div>
+
+    <div id="sentence"></div>
+
+    <div>
+        <button class="choice" onclick="chooseWord('dari')">dari</button>
+        <button class="choice" onclick="chooseWord('daripada')">daripada</button>
+    </div>
+
+    <button id="micBtn">🎤</button><br>
+    <button id="nextBtn">Tahap Seterusnya</button>
+
+    <p id="status"></p>
+</div>
+
+<script>
+const data = [
+{ text:"Murid-murid membersihkan kawasan sekolah ___ pagi hingga tengah hari", answer:"dari" },
+{ text:"Bau busuk itu datang ___ tong sampah di belakang kantin", answer:"dari" },
+{ text:"Mereka mengutip sampah ___ kawasan longkang yang kotor", answer:"dari" },
+{ text:"Penyapu itu dipinjam ___ pekerja kebersihan sekolah", answer:"daripada" },
+{ text:"Sampah sarap itu dikumpulkan ___ kawasan taman permainan", answer:"daripada" },
+{ text:"Kawasan sekolah kini lebih bersih ___ sebelumnya", answer:"daripada" },
+{ text:"Murid-murid datang ___ arah dewan", answer:"dari" },
+{ text:"Nasihat itu diberikan ___ guru disiplin", answer:"daripada" },
+{ text:"Air yang mengalir ___ paip digunakan", answer:"dari" },
+{ text:"Usaha lebih baik ___ bercakap sahaja", answer:"daripada" }
+];
+
+let currentLevel = 0;
+let score = 0;
+let selectedWord = "";
+
+const sentenceDiv = document.getElementById("sentence");
+const levelDiv = document.getElementById("level");
+const scoreDiv = document.getElementById("score");
+const statusDiv = document.getElementById("status");
+const nextBtn = document.getElementById("nextBtn");
+const car = document.getElementById("car");
+
+const bgMusic = new Audio("https://cdn.pixabay.com/audio/2022/03/15/audio_9c0c2f3a3e.mp3");
+bgMusic.loop = true;
+bgMusic.volume = 0.3;
+bgMusic.play();
+
+const successSound = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+const failSound = new Audio("https://actions.google.com/sounds/v1/cartoon/crash.ogg");
+
+function loadLevel() {
+    let q = data[currentLevel];
+    sentenceDiv.textContent = q.text.replace("___", "_____");
+    levelDiv.textContent = "Tahap " + (currentLevel+1) + "/" + data.length;
+    scoreDiv.textContent = "Markah: " + score;
+    selectedWord = "";
+    nextBtn.style.display = "none";
+    car.style.left = "10px";
+}
+
+loadLevel();
+
+function chooseWord(word) {
+    selectedWord = word;
+    statusDiv.textContent = "Pilihan: " + word + " | Sila tekan 🎤 dan sebut ayat penuh";
+}
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+    alert("Pelayar ini tidak menyokong pengecaman suara. Sila gunakan Google Chrome.");
+}
+
+const recognition = new SpeechRecognition();
+recognition.lang = "ms-MY";
+
+function similarity(a,b){
+    a=a.toLowerCase();
+    b=b.toLowerCase();
+    let match=0;
+    let aWords=a.split(" ");
+    let bWords=b.split(" ");
+    aWords.forEach(w=>{ if(bWords.includes(w)) match++; });
+    return match/aWords.length;
+}
+
+document.getElementById("micBtn").addEventListener("click", async ()=>{
+
+    if(!selectedWord){
+        statusDiv.textContent="Sila pilih jawapan dahulu!";
+        return;
+    }
+
+    try {
+        await navigator.mediaDevices.getUserMedia({audio:true});
+    } catch {
+        statusDiv.textContent="Sila benarkan akses mikrofon!";
+        return;
+    }
+
+    recognition.start();
+    statusDiv.textContent="🎤 Mendengar...";
+});
+
+recognition.onresult = function(e){
+    let spoken = e.results[0][0].transcript;
+    let q = data[currentLevel];
+    let correctSentence = q.text.replace("___", q.answer);
+
+    if(selectedWord !== q.answer){
+        statusDiv.textContent="❌ Pilihan salah!";
+        failSound.play();
+        return;
+    }
+
+    let sim = similarity(spoken, correctSentence);
+
+    if(sim > 0.75){
+        statusDiv.textContent="✅ Betul!";
+        score += 10;
+        successSound.play();
+        car.style.left = "300px";
+        nextBtn.style.display="inline-block";
+        scoreDiv.textContent="Markah: "+score;
+    } else {
+        statusDiv.textContent="❌ Sebutan salah. Cuba lagi.";
+        failSound.play();
+    }
+};
+
+recognition.onerror = function(e){
+    console.error(e.error);
+    if(e.error==="no-speech"){
+        statusDiv.textContent="Tiada suara dikesan.";
+    }
+};
+
+nextBtn.onclick = ()=>{
+    currentLevel++;
+    if(currentLevel < data.length){
+        loadLevel();
+        statusDiv.textContent="";
+    } else {
+        sentenceDiv.textContent="🎉 Anda menang Squid Game!";
+        nextBtn.style.display="none";
+    }
+};
+</script>
+
+</body>
+</html>
